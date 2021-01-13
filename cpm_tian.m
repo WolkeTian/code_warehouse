@@ -2,13 +2,12 @@ function CPM_Results = cpm_tian(fnc_mats,behav_vector,thresh_set, fold, isDirect
     % connectome-based predictive model
     % doi.org/10.1038/nprot.2016.178
     % fnc_mats: subs * nodes * nodes
-    % isDirected: 1, pos and neg seperately; 0, together.
+    % isDirected: 1, pos and neg seperately to predict; 0, together.
     % start
-
-    thresh = thresh_set;
+    
     % threshold for feature selection
-    % try
-
+    thresh = thresh_set;
+    
     % ---------------------------------------
     sub_nums = size(fnc_mats,1);
     node_nums = size(fnc_mats,2);
@@ -20,7 +19,6 @@ function CPM_Results = cpm_tian(fnc_mats,behav_vector,thresh_set, fold, isDirect
     tril_index = logical(tril(ones(node_nums), -1));
     tril_indexs = permute(repmat(tril_index, [1,1, sub_nums]), [3,1,2]);
     fnc2d = reshape(fnc_mats(tril_indexs), sub_nums, []); % to N * edges
-
 
 	k = fold;
     
@@ -189,12 +187,10 @@ function CPM_Results = cpm_tian(fnc_mats,behav_vector,thresh_set, fold, isDirect
     end
     
     % find stable connectivity
-    criteria = 0.9;% 90%
+    criteria = 1;% 90% default could be
     disp(['The default criteria for store valuable connectivity is ', num2str(criteria * 100), '%']);
     CPM_Results.stable_poslinks = squeeze(mean(CPM_Results.mask_pos, 1)) >= criteria;
     CPM_Results.stable_neglinks = squeeze(mean(CPM_Results.mask_neg, 1)) >= criteria;
     
     % function is over
 end
-
-
