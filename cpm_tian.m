@@ -1,5 +1,6 @@
 function CPM_Results = cpm_tian(fnc_mats,behav_vector,thresh_set, fold, isDirected)
     % connectome-based predictive model
+    % doi.org/10.1038/nprot.2016.178
     % fnc_mats: subs * nodes * nodes
     % isDirected: 1, pos and neg seperately; 0, together.
     % start
