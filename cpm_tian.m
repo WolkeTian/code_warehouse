@@ -68,7 +68,7 @@ function CPM_Results = cpm_tian(fnc_mats,behav_vector,thresh_set, fold, isDirect
             R_thre = sqrt(T_thre^2/(numel(train_behav) - 2 + T_thre^2)); %得到的R阈值
                     
             % 用sigmoidal函数创建加权mask
-            % 当相关=R时，weight = 0.88, R越大权重越大
+            % 当相关=R/3时，weight = 0.5; 当相关=R时，weight = 0.88, R越大权重越大
             pos_mask(pos_edges) = sigmf(r_mat(pos_edges), [3/R_thre, R_thre/3]);
             neg_mask(neg_edges) = sigmf(r_mat(neg_edges), [-3/R_thre, R_thre/3]);
         end
@@ -145,7 +145,9 @@ function CPM_Results = cpm_tian(fnc_mats,behav_vector,thresh_set, fold, isDirect
         lsline;title(['pos: p = ', num2str(P_pos),'|', 'r = ', num2str(R_pos)])
         % neg figure
         figure(2); plot(value2pred_2,behav_pred_neg,'b.'); 
-        lsline;title('neg: p = ', [num2str(P_neg),'|','r = ', num2str(R_neg)])
+        lsline;title('neg: p = ', [num2str(P_neg),'|','r = ', num2str(R_neg)]);
+        
+        
     elseif isDirected == 0 % 正负连接一起预测
         value2pred = behav_vector; value2pred = value2pred(1:numel(predict_behav)); % matche length
 
@@ -183,7 +185,7 @@ function CPM_Results = cpm_tian(fnc_mats,behav_vector,thresh_set, fold, isDirect
         
         %figure
         figure(1); plot(value2pred,predict_behav,'r.'); 
-        lsline;title(['p = ', num2str(P),'|', 'r = ', num2str(R)])
+        lsline;title(['p = ', num2str(P),'|', 'r = ', num2str(R)]);
     end
     
     % find stable connectivity
