@@ -92,19 +92,28 @@ function CPM_Results = cpm_tian(fnc_mats,behav_vector,thresh_set, fold, isDirect
         
         if isDirected == 1
             % build model on TRAIN subs
-            coef_pos = polyfit(sum_pos_links, train_behav,1); % 用训练被试显著相关的连接值的和，预测行为，线性拟合
-            coef_neg = polyfit(sum_neg_links, train_behav,1);
+            poly_pos = polyfit(sum_pos_links, train_behav,6); % 用训练被试显著相关的连接值的和，预测行为，线性拟合
+            poly_neg = polyfit(sum_neg_links, train_behav,6);
             % 模型，y = a*x + b;得到两个系数，a和b
             % run model on TEST sub
             
-            behav_pred_pos(leftout) = coef_pos(1)*test_sumpos + coef_pos(2);
-            behav_pred_neg(leftout) = coef_neg(1)*test_sumneg + coef_neg(2); % 得到这层循环抛出被试用正\负连接的预测值
+            behav_pred_pos(leftout) = polyval(poly_pos, test_sumpos);
+            behav_pred_neg(leftout) = polyval(poly_neg, test_sumneg);% 得到这层循环验证集用正\负连接的预测值
+            
+            %behav_pred_pos(leftout) = coef_pos(1)*test_sumpos + coef_pos(2);
+            %behav_pred_neg(leftout) = coef_neg(1)*test_sumneg + coef_neg(2); 
         elseif isDirected == 0
             % 正负连接共同预测
             % coef = polyfit([sum_pos_links, sum_neg_links], train_behav,1); 
             coef = regress(train_behav,[sum_pos_links, sum_neg_links, ones(numel(sum_neg_links), 1)]);
+            
             % 进行验证
             predict_behav(leftout) = coef(1) * test_sumpos + coef(2) * test_sumneg + coef(3);
+            
+%             % 不用加权和，用全部单个连接信息组成多元线性回归
+%             coefs = regress(train_behav,[train_fnc(:, pos_edges), train_fnc(:, neg_edges), ones(size(train_fnc, 1), 1)]);
+%             % 进行验证
+%             predict_behav(leftout) = [test_fnc(:, pos_edges), test_fnc(:, neg_edges), ones(size(test_fnc, 1), 1)] * coefs;
         end
     end
     % 循环结束
@@ -153,8 +162,8 @@ function CPM_Results = cpm_tian(fnc_mats,behav_vector,thresh_set, fold, isDirect
 
         value2pred((isnan(predict_behav)))=[]; % 预测值是空值的被扔掉
         predict_behav(isnan(predict_behav))=[];
-%         [R, P] = corr(predict_behav,value2pred); % 检测正连接预测效果
-        [R, P] = corr(predict_behav,value2pred, 'Type', 'Spearman'); % 斯皮尔曼等级相关
+        [R, P] = corr(predict_behav,value2pred); % 检测正连接预测效果
+        % [R, P] = corr(predict_behav,value2pred, 'Type', 'Spearman'); % 斯皮尔曼等级相关
         
         % permutation得到r值分布
         permtimes = 1e4;
