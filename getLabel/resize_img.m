@@ -1,134 +1,94 @@
-function resize_img(imnames, Voxdim, BB, ismask)
-%  resize_img -- resample images to have specified voxel dims and BBox
-% resize_img(imnames, voxdim, bb, ismask)
-%
-% Output images will be prefixed with 'r', and will have voxel dimensions
-% equal to voxdim. Use NaNs to determine voxdims from transformation matrix
-% of input image(s).
-% If bb == nan(2,3), bounding box will include entire original image
-% Origin will move appropriately. Use world_bb to compute bounding box from
-% a different image.
-%
-% Pass ismask=true to re-round binary mask values (avoid
-% growing/shrinking masks due to linear interp)
-%
-% See also voxdim, world_bb
-% Based on John Ashburner's reorient.m
-% http://www.sph.umich.edu/~nichols/JohnsGems.html#Gem7
-% http://www.sph.umich.edu/~nichols/JohnsGems5.html#Gem2
-% Adapted by Ged Ridgway -- email bugs to drc.spm@gmail.com
-% This version doesn't check spm_flip_analyze_images -- the handedness of
-% the output image and matrix should match those of the input.
-% Check spm version:
-if exist('spm_select','file') % should be true for spm5
-    spm5 = 1;
-elseif exist('spm_get','file') % should be true for spm2
-    spm5 = 0;
-else
-    error('Can''t find spm_get or spm_select; please add SPM to path')
+function Results = NII_getlabel(nii_map, threshold)
+% reference map: spm12 Neuromorphometrics, resolution: 1.5mm
+if ( ~exist('threshold', 'var') || isempty(threshold) )
+    threshold = 2; % default threshold set to 2
 end
-spm_defaults;
-% prompt for missing arguments
-if ( ~exist('imnames','var') || isempty(char(imnames)) )
-    if spm5
-        imnames = spm_select(inf, 'image', 'Choose images to resize');
-    else
-        imnames = spm_get(inf, 'img', 'Choose images to resize');
-    end
-end
-% check if inter fig already open, don't close later if so...
-Fint = spm_figure('FindWin', 'Interactive'); Fnew = [];
-if ( ~exist('Voxdim', 'var') || isempty(Voxdim) )
-    Fnew = spm_figure('GetWin', 'Interactive');
-    Voxdim = spm_input('Vox Dims (NaN for "as input")? ',...
-        '+1', 'e', '[nan nan nan]', 3);
-end
-if ( ~exist('BB', 'var') || isempty(BB) )
-    Fnew = spm_figure('GetWin', 'Interactive');
-    BB = spm_input('Bound Box (NaN => original)? ',...
-        '+1', 'e', '[nan nan nan; nan nan nan]', [2 3]);
-end
-if ~exist('ismask', 'var')
-    ismask = false;
-end
-if isempty(ismask)
-    ismask = false;
-end
-% reslice images one-by-one
-vols = spm_vol(imnames);
-for V=vols'
-    % (copy to allow defaulting of NaNs differently for each volume)
-    voxdim = Voxdim;
-    bb = BB;
-    % default voxdim to current volume's voxdim, (from mat parameters)
-    if any(isnan(voxdim))
-        vprm = spm_imatrix(V.mat);
-        vvoxdim = vprm(7:9);
-        voxdim(isnan(voxdim)) = vvoxdim(isnan(voxdim));
-    end
-    voxdim = voxdim(:)';
-mn = bb(1,:);
-    mx = bb(2,:);
-    % default BB to current volume's
-    if any(isnan(bb(:)))
-        vbb = world_bb(V);
-        vmn = vbb(1,:);
-        vmx = vbb(2,:);
-        mn(isnan(mn)) = vmn(isnan(mn));
-        mx(isnan(mx)) = vmx(isnan(mx));
-    end
-% voxel [1 1 1] of output should map to BB mn
-    % (the combination of matrices below first maps [1 1 1] to [0 0 0])
-    mat = spm_matrix([mn 0 0 0 voxdim])*spm_matrix([-1 -1 -1]);
-    % voxel-coords of BB mx gives number of voxels required
-    % (round up if more than a tenth of a voxel over)
-    imgdim = ceil(mat \ [mx 1]' - 0.1)';
-% output image
-    VO            = V;
-    [pth,nam,ext] = fileparts(V.fname);
-    VO.fname      = fullfile(pth,['r' nam ext]);
-    VO.dim(1:3)   = imgdim(1:3);
-    VO.mat        = mat;
-    VO = spm_create_vol(VO);
-    spm_progress_bar('Init',imgdim(3),'reslicing...','planes completed');
-    for i = 1:imgdim(3)
-        M = inv(spm_matrix([0 0 -i])*inv(VO.mat)*V.mat);
-        img = spm_slice_vol(V, M, imgdim(1:2), 1); % (linear interp)
-        if ismask
-            img = round(img);
-        end
-        spm_write_plane(VO, img, i);
-        spm_progress_bar('Set', i)
-    end
-    spm_progress_bar('Clear');
-end
-% call spm_close_vol if spm2
-if ~spm5
-    spm_close_vol(VO);
-end
-if (isempty(Fint) && ~isempty(Fnew))
-    % interactive figure was opened by this script, so close it again.
-    close(Fnew);
-end
-disp('Done.')
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function bb = world_bb(V)
-%  world-bb -- get bounding box in world (mm) coordinates
-d = V.dim(1:3);
-% corners in voxel-space
-c = [ 1    1    1    1
-    1    1    d(3) 1
-    1    d(2) 1    1
-    1    d(2) d(3) 1
-    d(1) 1    1    1
-    d(1) 1    d(3) 1
-    d(1) d(2) 1    1
-    d(1) d(2) d(3) 1 ]';
-% corners in world-space
-tc = V.mat(1:3,1:4)*c;
-% bounding box (world) min and max
-mn = min(tc,[],2)';
-mx = max(tc,[],2)';
-bb = [mn; mx];
+disp(['threshold is ', num2str(threshold)]);
+% prepare
+label_map = fullfile(spm('Dir'), 'tpm', 'labels_Neuromorphometrics.nii');
+label_xml = fullfile(spm('Dir'), 'tpm', 'labels_Neuromorphometrics.xml');
 
-% ю╢вт <http://www0.cs.ucl.ac.uk/staff/G.Ridgway/vbm/resize_img.m> 
+xml_struct = xml2struct(label_xml);
+xml_data = [xml_struct(2).Children(4).Children(4:2:end)];
+
+% initial varaible to store index and label
+label_indexs = zeros(numel(xml_data), 1);
+label_names = cell(numel(xml_data), 1);
+
+for i = 1:numel(xml_data)
+    % get index
+    label_indexs(i) = str2double(xml_data(i).Children(1).Children.Data);
+    % get label name
+    label_names(i) = {xml_data(i).Children(2).Children.Data};
+end
+
+
+% read label nifti 
+% label_niistruct = spm_vol_nifti(label_map);
+% label_niimat = label_niistruct.private.dat(); % load 3d mat data
+label_data = niftiread(label_map);
+label_info = niftiinfo(label_map);
+label_dims = label_info.PixelDimensions;
+
+% reslice ica map to smp12 label nifti resolution
+disp('Resize nii file to match label file ing...');
+resize_img(nii_map,label_dims, nan(2,3));
+
+% load resliced ica_map
+[fpath, fname] = fileparts(nii_map);
+rnii_map = fullfile(fpath, ['r', fname, '.nii']);
+
+% rica_niistruct = spm_vol_nifti(rnii_map);
+% rica_niimat = lica_niistruct.private.dat(); % load 3d mat data
+rnii_data = niftiread(rnii_map);
+
+% delete resliced nii map
+delete(rnii_map);
+
+
+if numel(size(rnii_data)) == 3 % if only one volume
+    [Results{1}, Results{2}] = getlabel_fromVolume(rnii_data, threshold, label_data, label_indexs, label_names);
+elseif numel(size(rnii_data)) == 4 % if multiple volumes
+    for n = 1:size(rnii_data, 4)
+        % loop for every volume
+        [Results{1, n}, Results{2, n}] = getlabel_fromVolume(squeeze(rnii_data(:,:,:,n)), threshold, label_data, label_indexs, label_names);
+    end
+end
+    
+
+% -----------------------End of code-------------------------------%
+end
+
+% -----------------------------------------------------------------------
+% nested function, get report from one volume
+function [Report, maxRegion] = getlabel_fromVolume(rnii_data, threshold, label_data, label_indexs, label_names)
+% threshold to binary
+    upper_thresh = label_data(rnii_data > threshold);
+    % only left with label & > threshold
+    upper_thresh = upper_thresh(upper_thresh ~= 0);
+    % statistics
+    uni_inds = unique(upper_thresh); % indexs of label upper threshold
+    uni_voxel_nums = zeros(numel(uni_inds), 1); % to store numbers of voxels
+    uni_voxel_mass = zeros(numel(uni_inds), 1); % to store mass of voxels (size * statistics value);
+    uni_labels = cell(numel(uni_inds), 1); % to store name of lable
+    for i = 1:numel(uni_inds)
+        % cal voxel sizes in 1.5 resolution
+        uni_voxel_nums(i) = sum(upper_thresh == uni_inds(i) );
+        % cal voxel masses in 1.5 resolution
+        uni_voxel_mass(i) = sum(rnii_data(rnii_data > threshold & label_data  == uni_inds(i)));
+        % find corresponding label
+        uni_labels(i) = label_names(label_indexs == uni_inds(i));
+    end
+    %resort by voxel numbers, descend
+    [VoxelSize, Ind] = sort(uni_voxel_nums, 'descend');
+    anatLabel = uni_labels(Ind);
+    VoxelMass = uni_voxel_mass(Ind);
+    % Report.thresh = threshold;
+
+    Report = table(VoxelSize, VoxelMass, anatLabel);
+    if isempty(anatLabel) % if no upper threshold voxel with label
+        maxRegion =NaN;
+    else
+        maxRegion = anatLabel(1);
+    end
+end
