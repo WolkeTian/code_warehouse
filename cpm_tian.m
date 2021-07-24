@@ -154,7 +154,7 @@ function CPM_Results = cpm_tian(fnc_mats,behav_vector,thresh_set, fold, isDirect
         lsline;title(['pos: p = ', num2str(P_pos),'|', 'r = ', num2str(R_pos)])
         % neg figure
         figure(2); plot(value2pred_2,behav_pred_neg,'b.'); 
-        lsline;title('neg: p = ', [num2str(P_neg),'|','r = ', num2str(R_neg)]);
+        lsline;title(['neg: p = ', num2str(P_neg),'|','r = ', num2str(R_neg)]);
         
         
     elseif isDirected == 0 % 正负连接一起预测
