@@ -133,7 +133,19 @@ function CPM_Results = cpm_tian(fnc_mats,behav_vector,thresh_set, fold, isDirect
         behav_pred_neg(isnan(behav_pred_neg))=[];
         [R_neg, P_neg] = corr(behav_pred_neg,value2pred_2);  % 检测负连接预测效果
         % compare predicted and observed scores
+	% permutation得到r值分布
+        permtimes = 1e4
+        disp(['start to permutation test for ', num2str(permtimes), 'please wait']);
+        [rdist_pos, rdist_neg] = deal(zeros(permtimes,1));
+        for itimes = 1:permtimes
+            newbeh = behav_vector(randperm(sub_nums));
+            rdist_pos(itimes) = corr(newbeh, behav_pred_pos);
+            rdist_neg(itimes) = corr(newbeh, behav_pred_neg);
+        end
 
+        P_pos = sum(R_pos <= rdist_pos)/permtimes;
+        P_neg = sum(R_neg <= rdist_pos)/permtimes;
+        % permutation结束
         
         % 得到用正/负相关分别预测的表现
 
