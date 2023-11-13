@@ -1,7 +1,9 @@
 function residual = reg_corr(Y,X)
-%´ÓYÖĞ»Ø¹éµôXµÄÓ°Ïì£¬µÃ³ö²Ğ²îY~
-%   ×Ô¶¯Ìí¼ÓinterceptÏî
+%ä»Yä¸­å›å½’æ‰Xçš„å½±å“ï¼Œå¾—å‡ºæ®‹å·®Y~
+%   è‡ªåŠ¨æ·»åŠ intercepté¡¹
 X = [X,ones(size(X,1),1)];
 residual = Y - X*(X\Y);
+% get mean back
+residual = residual + mean(Y);
 end
 
