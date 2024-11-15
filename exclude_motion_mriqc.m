@@ -40,5 +40,5 @@ disp(subids(FD_perc>0.3));
 %% 合计
 unique_exclude = unique([subids(maxmotions>motion_threshold); subids(meanFD>0.2); subids(FD_perc>0.3)]);
 disp(['综合排除', num2str(numel(unique_exclude)), '人']);
-disp(subids(FD_perc>0.3));
+disp(unique_exclude);
 
