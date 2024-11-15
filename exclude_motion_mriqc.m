@@ -8,6 +8,7 @@ tsvfiles = dir(fullfile(parentpath, 'sub-*', 'func', 'sub-*task-rest_timeseries.
 % 读取被试编号
 subids = struct2cell(tsvfiles);
 subids = subids(1,:)';
+assert(numel(subids) == numel(tsvfiles));
 % load tsv for each subject
 maxmotions = zeros(numel(tsvfiles), 1);
 for i = 1:numel(tsvfiles)
